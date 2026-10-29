@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Candidates - Online Voting System</title>
+
+    <link rel="stylesheet"
+          href="style.css">
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>🗳️ Online Voting System</h1>
+
+        <h2 id="electionName">
+            Candidates
+        </h2>
+
+        <p id="electionDescription">
+            Loading election details...
+        </p>
+
+        <p id="message"></p>
+
+
+        <div id="candidatesContainer">
+
+            <p>Loading candidates...</p>
+
+        </div>
+
+
+        <br>
+
+
+        <button
+            onclick="window.location.href='elections.html'">
+            Back to Elections
+        </button>
+
+
+        <button
+            onclick="window.location.href='results.html'">
+            View Results
+        </button>
+
+
+        <button
+            onclick="logout()">
+            Logout
+        </button>
+
+    </div>
+
+
+    <script>
+
+        const urlParams =
+            new URLSearchParams(
+                window.location.search
+            );
+
+
+        const electionId =
+            urlParams.get("electionId");
+
+
+        let currentElection = null;
+
+
+        async function loadElection() {
+
+            if (!electionId) {
+
+                document
+                    .getElementById("message")
+                    .innerText =
+                    "Election ID is missing.";
+
+                return;
+            }
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/api/elections/${electionId}`,
+                        {
+                            credentials: "include"
+                        }
+                    );
+
+
+                if (!response.ok) {
+
+                    document
+                        .getElementById("message")
+                        .innerText =
+                        "Unable to load election details.";
+
+                    return;
+                }
+
+
+                currentElection =
+                    await response.json();
+
+
+                document
+                    .getElementById("electionName")
+                    .innerText =
+                    currentElection.name ||
+                    "Election";
+
+
+                document
+                    .getElementById("electionDescription")
+                    .innerText =
+                    currentElection.description ||
+                    "No description available.";
+
+
+                loadCandidates();
+
+            } catch (error) {
+
+                console.error(
+                    "Election loading error:",
+                    error
+                );
+
+
+                document
+                    .getElementById("message")
+                    .innerText =
+                    "Unable to connect to server.";
+            }
+        }
+
+
+        async function loadCandidates() {
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/api/candidates/election/${electionId}`,
+                        {
+                            credentials: "include"
+                        }
+                    );
+
+
+                if (!response.ok) {
+
+                    document
+                        .getElementById("message")
+                        .innerText =
+                        "Unable to load candidates.";
+
+                    return;
+                }
+
+
+                const candidates =
+                    await response.json();
+
+
+                displayCandidates(candidates);
+
+            } catch (error) {
+
+                console.error(
+                    "Candidate loading error:",
+                    error
+                );
+
+
+                document
+                    .getElementById("message")
+                    .innerText =
+                    "Unable to connect to server.";
+            }
+        }
+
+
+        function displayCandidates(candidates) {
+
+            const container =
+                document.getElementById(
+                    "candidatesContainer"
+                );
+
+
+            if (!candidates ||
+                candidates.length === 0) {
+
+                container.innerHTML =
+                    "<p>No candidates found for this election.</p>";
+
+                return;
+            }
+
+
+            let html = "";
+
+
+            candidates.forEach(function(candidate) {
+
+                let voteButton = "";
+
+
+                if (
+                    currentElection &&
+                    currentElection.status === "ONGOING"
+                ) {
+
+                    voteButton = `
+                        <button
+                            onclick="vote(${candidate.id})">
+                            Vote for ${candidate.name}
+                        </button>
+                    `;
+
+                } else if (
+                    currentElection &&
+                    currentElection.status === "UPCOMING"
+                ) {
+
+                    voteButton = `
+                        <p>
+                            Voting has not started yet.
+                        </p>
+                    `;
+
+                } else if (
+                    currentElection &&
+                    currentElection.status === "ENDED"
+                ) {
+
+                    voteButton = `
+                        <p>
+                            Voting has ended.
+                        </p>
+                    `;
+                }
+
+
+                html += `
+
+                    <div
+                        class="candidate-card"
+                        style="
+                            border: 1px solid #ccc;
+                            padding: 20px;
+                            margin-bottom: 20px;
+                            border-radius: 10px;
+                            text-align: left;
+                        "
+                    >
+
+                        <h3>
+                            ${candidate.name || "Unnamed Candidate"}
+                        </h3>
+
+
+                        <p>
+                            <strong>Party:</strong>
+                            ${candidate.party || "Independent"}
+                        </p>
+
+
+                        <p>
+                            <strong>Election Symbol:</strong>
+                            ${candidate.symbol || "Not provided"}
+                        </p>
+
+
+                        ${voteButton}
+
+                    </div>
+
+                `;
+            });
+
+
+            container.innerHTML = html;
+        }
+
+
+        function vote(candidateId) {
+
+            if (!electionId || !candidateId) {
+
+                document
+                    .getElementById("message")
+                    .innerText =
+                    "Invalid election or candidate.";
+
+                return;
+            }
+
+
+            const confirmed =
+                confirm(
+                    "Are you sure you want to vote for this candidate?"
+                );
+
+
+            if (!confirmed) {
+                return;
+            }
+
+
+            window.location.href =
+                `vote.html?electionId=${electionId}&candidateId=${candidateId}`;
+        }
+
+
+        async function logout() {
+
+            try {
+
+                await fetch(
+                    "/api/auth/logout",
+                    {
+                        method: "POST",
+                        credentials: "include"
+                    }
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Logout error:",
+                    error
+                );
+
+            } finally {
+
+                window.location.href =
+                    "login.html";
+            }
+        }
+
+
+        loadElection();
+
+    </script>
+
+</body>
+
+</html>

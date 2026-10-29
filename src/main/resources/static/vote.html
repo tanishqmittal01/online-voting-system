@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Cast Vote - Online Voting System</title>
+
+    <link rel="stylesheet"
+          href="style.css">
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>🗳️ Online Voting System</h1>
+
+        <h2>Confirm Your Vote</h2>
+
+        <p>
+            Please review the details below before
+            submitting your vote.
+        </p>
+
+        <p id="message"></p>
+
+
+        <div id="voteDetails">
+
+            <p>Loading voting details...</p>
+
+        </div>
+
+
+        <div id="voteActions">
+
+            <button
+                id="confirmButton"
+                onclick="confirmVote()"
+                disabled>
+                Confirm Vote
+            </button>
+
+            <button
+                onclick="goBack()">
+                Cancel
+            </button>
+
+        </div>
+
+
+        <br>
+
+
+        <button
+            onclick="logout()">
+            Logout
+        </button>
+
+    </div>
+
+
+    <script>
+
+        const urlParams =
+            new URLSearchParams(
+                window.location.search
+            );
+
+
+        const electionId =
+            urlParams.get("electionId");
+
+
+        const candidateId =
+            urlParams.get("candidateId");
+
+
+        let election = null;
+
+        let candidate = null;
+
+
+        async function loadVotingDetails() {
+
+            if (!electionId || !candidateId) {
+
+                document
+                    .getElementById("message")
+                    .innerText =
+                    "Invalid election or candidate.";
+
+                document
+                    .getElementById("voteDetails")
+                    .innerHTML = "";
+
+                return;
+            }
+
+
+            try {
+
+                const electionResponse =
+                    await fetch(
+                        `/api/elections/${electionId}`,
+                        {
+                            credentials: "include"
+                        }
+                    );
+
+
+                if (!electionResponse.ok) {
+
+                    throw new Error(
+                        "Unable to load election."
+                    );
+                }
+
+
+                election =
+                    await electionResponse.json();
+
+
+                const candidatesResponse =
+                    await fetch(
+                        `/api/candidates/election/${electionId}`,
+                        {
+                            credentials: "include"
+                        }
+                    );
+
+
+                if (!candidatesResponse.ok) {
+
+                    throw new Error(
+                        "Unable to load candidates."
+                    );
+                }
+
+
+                const candidates =
+                    await candidatesResponse.json();
+
+
+                candidate =
+                    candidates.find(
+                        function(item) {
+                            return String(item.id) ===
+                                   String(candidateId);
+                        }
+                    );
+
+
+                if (!candidate) {
+
+                    throw new Error(
+                        "Candidate not found."
+                    );
+                }
+
+
+                displayVotingDetails();
+
+
+            } catch (error) {
+
+                console.error(
+                    "Voting details error:",
+                    error
+                );
+
+
+                document
+                    .getElementById("message")
+                    .innerText =
+                    error.message ||
+                    "Unable to load voting details.";
+
+                document
+                    .getElementById("voteActions")
+                    .style.display = "none";
+            }
+        }
+
+
+        function displayVotingDetails() {
+
+            const container =
+                document.getElementById(
+                    "voteDetails"
+                );
+
+
+            container.innerHTML = `
+
+                <div
+                    class="vote-card"
+                    style="
+                        border: 1px solid #ccc;
+                        padding: 25px;
+                        margin-bottom: 20px;
+                        border-radius: 10px;
+                        text-align: left;
+                    "
+                >
+
+                    <h3>
+                        ${election.name || "Election"}
+                    </h3>
+
+
+                    <p>
+                        <strong>Description:</strong>
+                        ${election.description ||
+                          "No description available."}
+                    </p>
+
+
+                    <hr>
+
+
+                    <h3>
+                        Selected Candidate
+                    </h3>
+
+
+                    <p>
+                        <strong>Name:</strong>
+                        ${candidate.name ||
+                          "Unnamed Candidate"}
+                    </p>
+
+
+                    <p>
+                        <strong>Party:</strong>
+                        ${candidate.party ||
+                          "Independent"}
+                    </p>
+
+
+                    <p>
+                        <strong>Election Symbol:</strong>
+                        ${candidate.symbol ||
+                          "Not provided"}
+                    </p>
+
+
+                    <hr>
+
+
+                    <p>
+                        <strong>Election Status:</strong>
+                        ${election.status ||
+                          "Unknown"}
+                    </p>
+
+                </div>
+
+            `;
+
+
+            if (election.status === "ONGOING") {
+
+                document
+                    .getElementById("confirmButton")
+                    .disabled = false;
+
+            } else {
+
+                document
+                    .getElementById("confirmButton")
+                    .disabled = true;
+
+
+                if (election.status === "UPCOMING") {
+
+                    document
+                        .getElementById("message")
+                        .innerText =
+                        "Voting has not started yet.";
+
+                } else if (
+                    election.status === "ENDED"
+                ) {
+
+                    document
+                        .getElementById("message")
+                        .innerText =
+                        "Voting for this election has ended.";
+
+                } else {
+
+                    document
+                        .getElementById("message")
+                        .innerText =
+                        "Voting is currently unavailable.";
+                }
+            }
+        }
+
+
+        async function confirmVote() {
+
+            if (!electionId || !candidateId) {
+
+                return;
+            }
+
+
+            const confirmed =
+                confirm(
+                    "Are you sure you want to submit this vote? You cannot vote again in this election."
+                );
+
+
+            if (!confirmed) {
+
+                return;
+            }
+
+
+            const confirmButton =
+                document.getElementById(
+                    "confirmButton"
+                );
+
+
+            confirmButton.disabled = true;
+
+            confirmButton.innerText =
+                "Submitting Vote...";
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/api/votes?candidateId=${candidateId}&electionId=${electionId}`,
+                        {
+                            method: "POST",
+                            credentials: "include"
+                        }
+                    );
+
+
+                const responseText =
+                    await response.text();
+
+
+                if (response.ok) {
+
+                    document
+                        .getElementById("message")
+                        .innerText =
+                        "✅ Your vote has been submitted successfully!";
+
+
+                    document
+                        .getElementById("voteActions")
+                        .style.display = "none";
+
+
+                    setTimeout(
+                        function() {
+
+                            window.location.href =
+                                `results.html?electionId=${electionId}`;
+
+                        },
+                        1500
+                    );
+
+                } else {
+
+                    let errorMessage =
+                        responseText;
+
+
+                    try {
+
+                        const data =
+                            JSON.parse(
+                                responseText
+                            );
+
+                        errorMessage =
+                            data.message ||
+                            data.error ||
+                            responseText;
+
+                    } catch (error) {
+
+                        // Server returned plain text.
+                    }
+
+
+                    document
+                        .getElementById("message")
+                        .innerText =
+                        errorMessage ||
+                        "Unable to submit your vote.";
+
+
+                    confirmButton.disabled =
+                        false;
+
+                    confirmButton.innerText =
+                        "Confirm Vote";
+                }
+
+
+            } catch (error) {
+
+                console.error(
+                    "Vote submission error:",
+                    error
+                );
+
+
+                document
+                    .getElementById("message")
+                    .innerText =
+                    "Unable to connect to server.";
+
+
+                confirmButton.disabled =
+                    false;
+
+                confirmButton.innerText =
+                    "Confirm Vote";
+            }
+        }
+
+
+        function goBack() {
+
+            window.location.href =
+                `candidates.html?electionId=${electionId}`;
+        }
+
+
+        async function logout() {
+
+            try {
+
+                await fetch(
+                    "/api/auth/logout",
+                    {
+                        method: "POST",
+                        credentials: "include"
+                    }
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Logout error:",
+                    error
+                );
+
+            } finally {
+
+                window.location.href =
+                    "login.html";
+            }
+        }
+
+
+        loadVotingDetails();
+
+    </script>
+
+</body>
+
+</html>

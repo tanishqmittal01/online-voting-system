@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Election Results - Online Voting System</title>
+
+    <link rel="stylesheet"
+          href="style.css">
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>🗳️ Online Voting System</h1>
+
+        <h2>Election Results</h2>
+
+        <div id="electionInfo">
+            <p>Loading election details...</p>
+        </div>
+
+        <p id="message"></p>
+
+
+        <div
+            id="summary"
+            style="
+                border: 1px solid #ccc;
+                padding: 20px;
+                margin-bottom: 25px;
+                border-radius: 10px;
+            "
+        >
+
+            <h3>Election Summary</h3>
+
+            <p>
+                <strong>Total Votes:</strong>
+                <span id="totalVotes">Loading...</span>
+            </p>
+
+        </div>
+
+
+        <div id="resultsContainer">
+
+            <p>Loading results...</p>
+
+        </div>
+
+
+        <br>
+
+
+        <button
+            onclick="window.location.href='elections.html'">
+            Back to Elections
+        </button>
+
+
+        <button
+            onclick="logout()">
+            Logout
+        </button>
+
+
+        <button
+            onclick="window.location.href='index.html'">
+            Back to Home
+        </button>
+
+    </div>
+
+
+    <script>
+
+        const urlParams =
+            new URLSearchParams(
+                window.location.search
+            );
+
+
+        let electionId =
+            urlParams.get("electionId");
+
+
+        async function loadResults() {
+
+            try {
+
+                /*
+                 * If an electionId was provided in the URL,
+                 * use that election.
+                 *
+                 * Otherwise load the available elections
+                 * and use the first one.
+                 */
+
+                if (!electionId) {
+
+                    const electionsResponse =
+                        await fetch(
+                            "/api/elections",
+                            {
+                                credentials: "include"
+                            }
+                        );
+
+
+                    if (!electionsResponse.ok) {
+
+                        throw new Error(
+                            "Unable to load elections."
+                        );
+                    }
+
+
+                    const elections =
+                        await electionsResponse.json();
+
+
+                    if (!elections ||
+                        elections.length === 0) {
+
+                        throw new Error(
+                            "No elections available."
+                        );
+                    }
+
+
+                    electionId =
+                        elections[0].id;
+                }
+
+
+                /*
+                 * Load election details
+                 */
+
+                const electionResponse =
+                    await fetch(
+                        `/api/elections/${electionId}`,
+                        {
+                            credentials: "include"
+                        }
+                    );
+
+
+                if (!electionResponse.ok) {
+
+                    throw new Error(
+                        "Unable to load election details."
+                    );
+                }
+
+
+                const election =
+                    await electionResponse.json();
+
+
+                displayElectionInfo(election);
+
+
+                /*
+                 * Load candidate results
+                 */
+
+                const resultsResponse =
+                    await fetch(
+                        `/api/results/election/${electionId}`,
+                        {
+                            credentials: "include"
+                        }
+                    );
+
+
+                if (!resultsResponse.ok) {
+
+                    throw new Error(
+                        "Unable to load election results."
+                    );
+                }
+
+
+                const results =
+                    await resultsResponse.json();
+
+
+                /*
+                 * Load total votes
+                 */
+
+                const totalResponse =
+                    await fetch(
+                        `/api/results/election/${electionId}/total`,
+                        {
+                            credentials: "include"
+                        }
+                    );
+
+
+                if (!totalResponse.ok) {
+
+                    throw new Error(
+                        "Unable to load total votes."
+                    );
+                }
+
+
+                const totalVotes =
+                    await totalResponse.json();
+
+
+                document
+                    .getElementById("totalVotes")
+                    .innerText =
+                    totalVotes;
+
+
+                displayResults(
+                    results,
+                    totalVotes
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    "Results loading error:",
+                    error
+                );
+
+
+                document
+                    .getElementById("message")
+                    .innerText =
+                    error.message ||
+                    "Unable to load results.";
+
+
+                document
+                    .getElementById("resultsContainer")
+                    .innerHTML = "";
+
+            }
+
+        }
+
+
+        function displayElectionInfo(election) {
+
+            const container =
+                document.getElementById(
+                    "electionInfo"
+                );
+
+
+            container.innerHTML = `
+
+                <div
+                    style="
+                        border: 1px solid #ccc;
+                        padding: 20px;
+                        margin-bottom: 25px;
+                        border-radius: 10px;
+                        text-align: left;
+                    "
+                >
+
+                    <h3>
+                        ${election.name ||
+                          "Election"}
+                    </h3>
+
+
+                    <p>
+                        <strong>Description:</strong>
+                        ${election.description ||
+                          "No description available."}
+                    </p>
+
+
+                    <p>
+                        <strong>Start:</strong>
+                        ${formatDate(
+                            election.startDate
+                        )}
+                    </p>
+
+
+                    <p>
+                        <strong>End:</strong>
+                        ${formatDate(
+                            election.endDate
+                        )}
+                    </p>
+
+
+                    <p>
+                        <strong>Status:</strong>
+                        ${election.status ||
+                          "Unknown"}
+                    </p>
+
+                </div>
+
+            `;
+        }
+
+
+        function displayResults(
+            results,
+            totalVotes
+        ) {
+
+            const container =
+                document.getElementById(
+                    "resultsContainer"
+                );
+
+
+            if (!results ||
+                results.length === 0) {
+
+                container.innerHTML =
+                    "<p>No candidate results available.</p>";
+
+                return;
+            }
+
+
+            let html =
+                "<h3>Candidate Results</h3>";
+
+
+            results.forEach(
+                function(result) {
+
+                    const voteCount =
+                        Number(
+                            result.voteCount || 0
+                        );
+
+
+                    let percentage = 0;
+
+
+                    if (Number(totalVotes) > 0) {
+
+                        percentage =
+                            (
+                                voteCount /
+                                Number(totalVotes)
+                            ) * 100;
+                    }
+
+
+                    html += `
+
+                        <div
+                            style="
+                                border: 1px solid #ccc;
+                                padding: 20px;
+                                margin-bottom: 20px;
+                                border-radius: 10px;
+                                text-align: left;
+                            "
+                        >
+
+                            <h3>
+                                ${result.candidateName ||
+                                  "Unnamed Candidate"}
+                            </h3>
+
+
+                            <p>
+                                <strong>Party:</strong>
+                                ${result.party ||
+                                  "Independent"}
+                            </p>
+
+
+                            <p>
+                                <strong>Election Symbol:</strong>
+                                ${result.symbol ||
+                                  "Not provided"}
+                            </p>
+
+
+                            <p>
+                                <strong>Votes:</strong>
+                                ${voteCount}
+                            </p>
+
+
+                            <p>
+                                <strong>Vote Percentage:</strong>
+                                ${percentage.toFixed(2)}%
+                            </p>
+
+
+                            <div
+                                style="
+                                    width: 100%;
+                                    background: #eee;
+                                    border-radius: 5px;
+                                    height: 20px;
+                                    overflow: hidden;
+                                "
+                            >
+
+                                <div
+                                    style="
+                                        width: ${percentage}%;
+                                        height: 100%;
+                                        background: #4caf50;
+                                    "
+                                ></div>
+
+                            </div>
+
+                        </div>
+
+                    `;
+                }
+            );
+
+
+            container.innerHTML =
+                html;
+        }
+
+
+        function formatDate(dateValue) {
+
+            if (!dateValue) {
+
+                return "Not available";
+            }
+
+
+            const date =
+                new Date(dateValue);
+
+
+            if (isNaN(date.getTime())) {
+
+                return dateValue;
+            }
+
+
+            return date.toLocaleString();
+        }
+
+
+        async function logout() {
+
+            try {
+
+                await fetch(
+                    "/api/auth/logout",
+                    {
+                        method: "POST",
+                        credentials: "include"
+                    }
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Logout error:",
+                    error
+                );
+
+            } finally {
+
+                window.location.href =
+                    "login.html";
+            }
+
+        }
+
+
+        loadResults();
+
+    </script>
+
+</body>
+
+</html>

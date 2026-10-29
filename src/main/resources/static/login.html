@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Login - Online Voting System</title>
+
+    <link rel="stylesheet"
+          href="style.css">
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Online Voting System</h1>
+
+        <h2>Login</h2>
+
+        <p>
+            Login to access the voting system
+        </p>
+
+
+        <form id="loginForm">
+
+            <input
+                type="email"
+                id="email"
+                placeholder="Enter your email"
+                required
+            >
+
+
+            <input
+                type="password"
+                id="password"
+                placeholder="Enter your password"
+                required
+            >
+
+
+            <button type="submit">
+                Login
+            </button>
+
+        </form>
+
+
+        <p id="message"></p>
+
+
+        <button
+            onclick="window.location.href='register.html'">
+            Create New Account
+        </button>
+
+
+        <button
+            onclick="window.location.href='index.html'">
+            Back to Home
+        </button>
+
+    </div>
+
+
+    <script>
+
+        document
+            .getElementById("loginForm")
+            .addEventListener(
+                "submit",
+                async function(event) {
+
+                    event.preventDefault();
+
+
+                    const email =
+                        document
+                            .getElementById("email")
+                            .value;
+
+                    const password =
+                        document
+                            .getElementById("password")
+                            .value;
+
+
+                    try {
+
+                        const response =
+                            await fetch(
+                                "/api/auth/login",
+                                {
+                                    method: "POST",
+
+                                    credentials: "include",
+
+                                    headers: {
+                                        "Content-Type":
+                                            "application/json"
+                                    },
+
+                                    body:
+                                        JSON.stringify({
+                                            email: email,
+                                            password: password
+                                        })
+                                }
+                            );
+
+
+                        const responseText =
+                            await response.text();
+
+
+                        if (response.ok) {
+
+                            let user;
+
+                            try {
+
+                                user =
+                                    JSON.parse(
+                                        responseText
+                                    );
+
+                            } catch (error) {
+
+                                document
+                                    .getElementById("message")
+                                    .innerText =
+                                    "Login successful.";
+
+                                return;
+                            }
+
+
+                            document
+                                .getElementById("message")
+                                .innerText =
+                                "Login successful!";
+
+
+                            if (user.role === "ADMIN") {
+
+                                window.location.href =
+                                    "admin.html";
+
+                            } else {
+
+                                window.location.href =
+                                    "elections.html";
+                            }
+
+                        } else {
+
+                            let errorMessage =
+                                responseText;
+
+
+                            try {
+
+                                const data =
+                                    JSON.parse(
+                                        responseText
+                                    );
+
+                                errorMessage =
+                                    data.message ||
+                                    data.error ||
+                                    responseText;
+
+                            } catch (error) {
+
+                                // Server returned plain text.
+                            }
+
+
+                            document
+                                .getElementById("message")
+                                .innerText =
+                                errorMessage ||
+                                "Invalid email or password.";
+                        }
+
+                    } catch (error) {
+
+                        console.error(
+                            "Login error:",
+                            error
+                        );
+
+                        document
+                            .getElementById("message")
+                            .innerText =
+                            "Unable to connect to server.";
+                    }
+
+                }
+            );
+
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Manage Candidates - Online Voting System</title>
+
+    <link rel="stylesheet"
+          href="style.css">
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>👤 Manage Candidates</h1>
+
+        <p>
+            Add, update and manage candidates for elections.
+        </p>
+
+        <p id="message"></p>
+
+
+        <!-- SELECT ELECTION -->
+
+        <div
+            style="
+                border: 1px solid #ccc;
+                padding: 25px;
+                margin-bottom: 30px;
+                border-radius: 10px;
+                text-align: left;
+            "
+        >
+
+            <h2>Select Election</h2>
+
+            <select
+                id="electionSelect"
+                onchange="loadCandidates()"
+            >
+
+                <option value="">
+                    Select an election
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <!-- ADD CANDIDATE -->
+
+        <div
+            id="addCandidateSection"
+            style="
+                border: 1px solid #ccc;
+                padding: 25px;
+                margin-bottom: 30px;
+                border-radius: 10px;
+                text-align: left;
+            "
+        >
+
+            <h2>Add Candidate</h2>
+
+            <form id="candidateForm">
+
+                <label for="candidateName">
+                    Candidate Name
+                </label>
+
+                <input
+                    type="text"
+                    id="candidateName"
+                    placeholder="Enter candidate name"
+                    required
+                >
+
+
+                <label for="candidateParty">
+                    Party
+                </label>
+
+                <input
+                    type="text"
+                    id="candidateParty"
+                    placeholder="Enter party name"
+                    required
+                >
+
+
+                <label for="candidateSymbol">
+                    Election Symbol
+                </label>
+
+                <input
+                    type="text"
+                    id="candidateSymbol"
+                    placeholder="Enter election symbol"
+                >
+
+
+                <br>
+                <br>
+
+
+                <button type="submit">
+                    Add Candidate
+                </button>
+
+            </form>
+
+        </div>
+
+
+        <!-- CANDIDATE LIST -->
+
+        <h2>Election Candidates</h2>
+
+        <div id="candidatesContainer">
+
+            <p>
+                Select an election to view candidates.
+            </p>
+
+        </div>
+
+
+        <br>
+
+
+        <button
+            onclick="window.location.href='admin.html'">
+            Back to Admin Dashboard
+        </button>
+
+
+        <button
+            onclick="logout()">
+            Logout
+        </button>
+
+
+        <button
+            onclick="window.location.href='index.html'">
+            Back to Home
+        </button>
+
+    </div>
+
+
+    <script>
+
+        async function loadElections() {
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/api/elections",
+                        {
+                            credentials: "include"
+                        }
+                    );
+
+
+                if (!response.ok) {
+
+                    document
+                        .getElementById("message")
+                        .innerText =
+                        "Unable to load elections.";
+
+                    return;
+                }
+
+
+                const elections =
+                    await response.json();
+
+
+                const select =
+                    document.getElementById(
+                        "electionSelect"
+                    );
+
+
+                select.innerHTML =
+                    `
+                        <option value="">
+                            Select an election
+                        </option>
+                    `;
+
+
+                elections.forEach(
+                    function(election) {
+
+                        const option =
+                            document.createElement(
+                                "option"
+                            );
+
+
+                        option.value =
+                            election.id;
+
+
+                        option.textContent =
+                            `${election.name} (ID: ${election.id})`;
+
+
+                        select.appendChild(
+                            option
+                        );
+
+                    }
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    "Load elections error:",
+                    error
+                );
+
+
+                document
+                    .getElementById("message")
+                    .innerText =
+                    "Unable to connect to server.";
+            }
+        }
+
+
+        async function loadCandidates() {
+
+            const electionId =
+                document
+                    .getElementById("electionSelect")
+                    .value;
+
+
+            const container =
+                document.getElementById(
+                    "candidatesContainer"
+                );
+
+
+            if (!electionId) {
+
+                container.innerHTML =
+                    "<p>Select an election to view candidates.</p>";
+
+                return;
+            }
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/api/candidates/election/${electionId}`,
+                        {
+                            credentials: "include"
+                        }
+                    );
+
+
+                if (!response.ok) {
+
+                    container.innerHTML =
+                        "<p>Unable to load candidates.</p>";
+
+                    return;
+                }
+
+
+                const candidates =
+                    await response.json();
+
+
+                displayCandidates(
+                    candidates
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    "Load candidates error:",
+                    error
+                );
+
+
+                container.innerHTML =
+                    "<p>Unable to connect to server.</p>";
+            }
+        }
+
+
+        function displayCandidates(candidates) {
+
+            const container =
+                document.getElementById(
+                    "candidatesContainer"
+                );
+
+
+            if (
+                !candidates ||
+                candidates.length === 0
+            ) {
+
+                container.innerHTML =
+                    "<p>No candidates found for this election.</p>";
+
+                return;
+            }
+
+
+            let html = "";
+
+
+            candidates.forEach(
+                function(candidate) {
+
+                    html += `
+
+                        <div
+                            style="
+                                border: 1px solid #ccc;
+                                padding: 25px;
+                                margin-bottom: 20px;
+                                border-radius: 10px;
+                                text-align: left;
+                            "
+                        >
+
+                            <h3>
+                                Candidate ID:
+                                ${candidate.id}
+                            </h3>
+
+
+                            <label>
+                                Candidate Name
+                            </label>
+
+                            <input
+                                type="text"
+                                id="name-${candidate.id}"
+                                value="${escapeHtml(
+                                    candidate.name || ""
+                                )}"
+                            >
+
+
+                            <label>
+                                Party
+                            </label>
+
+                            <input
+                                type="text"
+                                id="party-${candidate.id}"
+                                value="${escapeHtml(
+                                    candidate.party || ""
+                                )}"
+                            >
+
+
+                            <label>
+                                Election Symbol
+                            </label>
+
+                            <input
+                                type="text"
+                                id="symbol-${candidate.id}"
+                                value="${escapeHtml(
+                                    candidate.symbol || ""
+                                )}"
+                            >
+
+
+                            <br>
+                            <br>
+
+
+                            <button
+                                onclick="updateCandidate(${candidate.id})">
+                                Update
+                            </button>
+
+
+                            <button
+                                onclick="deleteCandidate(${candidate.id})">
+                                Delete
+                            </button>
+
+                        </div>
+
+                    `;
+                }
+            );
+
+
+            container.innerHTML =
+                html;
+        }
+
+
+        document
+            .getElementById("candidateForm")
+            .addEventListener(
+                "submit",
+                async function(event) {
+
+                    event.preventDefault();
+
+
+                    const electionId =
+                        document
+                            .getElementById(
+                                "electionSelect"
+                            )
+                            .value;
+
+
+                    if (!electionId) {
+
+                        document
+                            .getElementById("message")
+                            .innerText =
+                            "Please select an election.";
+
+                        return;
+                    }
+
+
+                    const candidate = {
+
+                        name:
+                            document
+                                .getElementById(
+                                    "candidateName"
+                                )
+                                .value
+                                .trim(),
+
+                        party:
+                            document
+                                .getElementById(
+                                    "candidateParty"
+                                )
+                                .value
+                                .trim(),
+
+                        symbol:
+                            document
+                                .getElementById(
+                                    "candidateSymbol"
+                                )
+                                .value
+                                .trim()
+                    };
+
+
+                    try {
+
+                        const response =
+                            await fetch(
+                                `/api/candidates/election/${electionId}`,
+                                {
+                                    method: "POST",
+
+                                    credentials: "include",
+
+                                    headers: {
+                                        "Content-Type":
+                                            "application/json"
+                                    },
+
+                                    body:
+                                        JSON.stringify(
+                                            candidate
+                                        )
+                                }
+                            );
+
+
+                        const responseText =
+                            await response.text();
+
+
+                        if (response.ok) {
+
+                            document
+                                .getElementById("message")
+                                .innerText =
+                                "Candidate added successfully.";
+
+                            document
+                                .getElementById(
+                                    "candidateForm"
+                                )
+                                .reset();
+
+
+                            await loadCandidates();
+
+                        } else {
+
+                            showError(
+                                responseText,
+                                "Unable to add candidate."
+                            );
+                        }
+
+
+                    } catch (error) {
+
+                        console.error(
+                            "Add candidate error:",
+                            error
+                        );
+
+
+                        document
+                            .getElementById("message")
+                            .innerText =
+                            "Unable to connect to server.";
+                    }
+
+                }
+            );
+
+
+        async function updateCandidate(id) {
+
+            const name =
+                document
+                    .getElementById(
+                        `name-${id}`
+                    )
+                    .value
+                    .trim();
+
+
+            const party =
+                document
+                    .getElementById(
+                        `party-${id}`
+                    )
+                    .value
+                    .trim();
+
+
+            const symbol =
+                document
+                    .getElementById(
+                        `symbol-${id}`
+                    )
+                    .value
+                    .trim();
+
+
+            if (!name) {
+
+                document
+                    .getElementById("message")
+                    .innerText =
+                    "Candidate name is required.";
+
+                return;
+            }
+
+
+            const candidate = {
+
+                name: name,
+
+                party: party,
+
+                symbol: symbol
+            };
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/api/candidates/${id}`,
+                        {
+                            method: "PUT",
+
+                            credentials: "include",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    candidate
+                                )
+                        }
+                    );
+
+
+                const responseText =
+                    await response.text();
+
+
+                if (response.ok) {
+
+                    document
+                        .getElementById("message")
+                        .innerText =
+                        "Candidate updated successfully.";
+
+                    await loadCandidates();
+
+                } else {
+
+                    showError(
+                        responseText,
+                        "Unable to update candidate."
+                    );
+                }
+
+
+            } catch (error) {
+
+                console.error(
+                    "Update candidate error:",
+                    error
+                );
+
+
+                document
+                    .getElementById("message")
+                    .innerText =
+                    "Unable to connect to server.";
+            }
+        }
+
+
+        async function deleteCandidate(id) {
+
+            const confirmed =
+                confirm(
+                    "Are you sure you want to delete this candidate?"
+                );
+
+
+            if (!confirmed) {
+
+                return;
+            }
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/api/candidates/${id}`,
+                        {
+                            method: "DELETE",
+
+                            credentials: "include"
+                        }
+                    );
+
+
+                const responseText =
+                    await response.text();
+
+
+                if (response.ok) {
+
+                    document
+                        .getElementById("message")
+                        .innerText =
+                        "Candidate deleted successfully.";
+
+                    await loadCandidates();
+
+                } else {
+
+                    showError(
+                        responseText,
+                        "Unable to delete candidate."
+                    );
+                }
+
+
+            } catch (error) {
+
+                console.error(
+                    "Delete candidate error:",
+                    error
+                );
+
+
+                document
+                    .getElementById("message")
+                    .innerText =
+                    "Unable to connect to server.";
+            }
+        }
+
+
+        function escapeHtml(value) {
+
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+
+        function showError(
+            responseText,
+            defaultMessage
+        ) {
+
+            let errorMessage =
+                responseText;
+
+
+            try {
+
+                const data =
+                    JSON.parse(
+                        responseText
+                    );
+
+
+                errorMessage =
+                    data.message ||
+                    data.error ||
+                    responseText;
+
+            } catch (error) {
+
+                // Server returned plain text.
+            }
+
+
+            document
+                .getElementById("message")
+                .innerText =
+                errorMessage ||
+                defaultMessage;
+        }
+
+
+        async function logout() {
+
+            try {
+
+                await fetch(
+                    "/api/auth/logout",
+                    {
+                        method: "POST",
+                        credentials: "include"
+                    }
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Logout error:",
+                    error
+                );
+
+            } finally {
+
+                window.location.href =
+                    "login.html";
+            }
+        }
+
+
+        loadElections();
+
+    </script>
+
+</body>
+
+</html>

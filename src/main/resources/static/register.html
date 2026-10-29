@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Register - Online Voting System</title>
+
+    <link rel="stylesheet"
+          href="style.css">
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Online Voting System</h1>
+
+        <h2>Voter Registration</h2>
+
+        <p>
+            Create your voter account
+        </p>
+
+
+        <form id="registerForm">
+
+            <input
+                type="text"
+                id="name"
+                placeholder="Enter your full name"
+                required
+            >
+
+
+            <input
+                type="text"
+                id="studentId"
+                placeholder="Enter your Student ID"
+                required
+            >
+
+
+            <input
+                type="email"
+                id="email"
+                placeholder="Enter your email"
+                required
+            >
+
+
+            <input
+                type="password"
+                id="password"
+                placeholder="Create a password"
+                required
+                minlength="6"
+            >
+
+
+            <button type="submit">
+                Register
+            </button>
+
+        </form>
+
+
+        <p id="message"></p>
+
+
+        <button
+            onclick="window.location.href='login.html'">
+            Already have an account? Login
+        </button>
+
+
+        <button
+            onclick="window.location.href='index.html'">
+            Back to Home
+        </button>
+
+    </div>
+
+
+    <script>
+
+        document
+            .getElementById("registerForm")
+            .addEventListener(
+                "submit",
+                async function(event) {
+
+                    event.preventDefault();
+
+
+                    const name =
+                        document
+                            .getElementById("name")
+                            .value
+                            .trim();
+
+
+                    const studentId =
+                        document
+                            .getElementById("studentId")
+                            .value
+                            .trim();
+
+
+                    const email =
+                        document
+                            .getElementById("email")
+                            .value
+                            .trim();
+
+
+                    const password =
+                        document
+                            .getElementById("password")
+                            .value;
+
+
+                    const user = {
+
+                        name: name,
+
+                        studentId: studentId,
+
+                        email: email,
+
+                        password: password
+                    };
+
+
+                    try {
+
+                        const response =
+                            await fetch(
+                                "/api/users/register",
+                                {
+                                    method: "POST",
+
+                                    headers: {
+                                        "Content-Type":
+                                            "application/json"
+                                    },
+
+                                    body:
+                                        JSON.stringify(user)
+                                }
+                            );
+
+
+                        const responseText =
+                            await response.text();
+
+
+                        if (response.ok) {
+
+                            document
+                                .getElementById("message")
+                                .innerText =
+                                "Registration successful!";
+
+
+                            document
+                                .getElementById("registerForm")
+                                .reset();
+
+                        } else {
+
+                            let errorMessage =
+                                responseText;
+
+
+                            try {
+
+                                const data =
+                                    JSON.parse(
+                                        responseText
+                                    );
+
+                                errorMessage =
+                                    data.message ||
+                                    data.error ||
+                                    responseText;
+
+                            } catch (error) {
+
+                                // Server returned plain text.
+                            }
+
+
+                            document
+                                .getElementById("message")
+                                .innerText =
+                                errorMessage ||
+                                "Registration failed.";
+                        }
+
+                    } catch (error) {
+
+                        console.error(
+                            "Registration error:",
+                            error
+                        );
+
+
+                        document
+                            .getElementById("message")
+                            .innerText =
+                            "Unable to connect to server.";
+                    }
+
+                }
+            );
+
+    </script>
+
+</body>
+
+</html>
